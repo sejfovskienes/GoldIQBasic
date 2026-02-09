@@ -2,22 +2,31 @@
 # import numpy as np 
 
 def compute_indicators(df):
-    df["sma_20"] = df["Close"].rolling(20).mean()
-    df["sma_50"] = df["Close"].rolling(50).mean()
-    df["ema_20"] = df["Close"].ewm(span=20).mean()
+    # Moving averages
+    df["sma_20"] = df["close"].rolling(20).mean()
+    df["sma_50"] = df["close"].rolling(50).mean()
 
-    delta = df["Close"].diff()
+    df["ema_12"] = df["close"].ewm(span=12, adjust=False).mean()
+    df["ema_26"] = df["close"].ewm(span=26, adjust=False).mean()
+    df["ema_20"] = df["close"].ewm(span=20, adjust=False).mean()
+
+    # MACD
+    df["macd"] = df["ema_12"] - df["ema_26"]
+    df["macd_signal"] = df["macd"].ewm(span=9, adjust=False).mean()
+
+    # RSI
+    delta = df["close"].diff()
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
     rs = gain.rolling(14).mean() / loss.rolling(14).mean()
     df["rsi"] = 100 - (100 / (1 + rs))
 
-    df["macd"] = df["ema_20"] - df["Close"].ewm(span=26).mean()
-    df["macd_signal"] = df["macd"].ewm(span=9).mean()
+    # Bollinger Bands
+    rolling_std = df["close"].rolling(20).std()
+    df["bb_upper"] = df["sma_20"] + 2 * rolling_std
+    df["bb_lower"] = df["sma_20"] - 2 * rolling_std
 
-    df["bb_upper"] = df["sma_20"] + 2 * df["Close"].rolling(20).std()
-    df["bb_lower"] = df["sma_20"] - 2 * df["Close"].rolling(20).std()
-
-    df["atr"] = (df["High"] - df["Low"]).rolling(14).mean()
+    # ATR
+    df["atr"] = (df["high"] - df["low"]).rolling(14).mean()
 
     return df.dropna()
